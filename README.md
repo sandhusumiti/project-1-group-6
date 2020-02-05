@@ -1,11 +1,15 @@
 # Project Description
 
-A brief description of what this repository is for and what it contains
+## This is the repository for Project 1 in BF528. 
+## This will soon contain files to classify microarray-based tumors.
 
 # Contributors
 
-List contributor names and github user names, or email addresses if desired
+Emily Hughes <ehug@bu.edu>
+Simran Makwana <makwana@bu.edu>
+Sumiti Sandhu <sandhu08@bu.edu>
+Michiel Smit <smit2@bu.edu>
 
 # Repository Contents
 
-Provide a brief description of each script/code file in this repo, what it does, and how to execute it
+## We do not really have any files at the moment.
