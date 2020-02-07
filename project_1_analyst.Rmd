@@ -1,9 +1,11 @@
 ---
-title: "Noise Filtering and Dimensionality Reduction"
+title: "Analyst role for project 1"
 author: "Simran"
 date: "1/31/2020"
 output: word_document
 ---
+
+## Noise Filtering and Dimensionality Reduction (Part 4)
 
 # load data
 ```{r}
@@ -15,17 +17,15 @@ intensity_data <- read.table("example_intensity_data.csv")
 
 1. Expressed in at least 20% of samples (i.e. for each gene, at least 20% of the gene-expression values must be > 𝑙𝑜𝑔2(15)).
 ```{r}
-cutoff <- log2(15)
-poorly_expressed <- c()
-for (gene in 1:ncol(intensity_data)) {
-  percent_expressed <- sum(intensity_data[gene] > cutoff)/nrow(intensity_data) 
-  if (percent_expressed < .2) {
-    poorly_expressed <- c(poorly_expressed, gene)
-  }
+
+expressed <- function(probe) {
+  percent <- sum(probe > log2(15))/ncol(intensity_data)
+  if (percent >= .20) { return(TRUE) } 
+  else { return(FALSE) }
 }
 
-if (!is.null(poorly_expressed)) { filter1_data <- intensity_data[-poorly_expressed]
-} else { filter1_data <- intensity_data }
+expression_vec <- apply(intensity_data, 1, expressed)
+data_1 <- intensity_data[expression_vec,]
 
 ```
 
@@ -37,9 +37,9 @@ filter2_data <- filter1_data
 
 3. Have a coefficient of variation > 0.186.
 ```{r}
-covs <- apply(filter2_data, 2, sd) / apply(filter2_data, 2, mean)
+covs <- apply(data_2, 1, var) 
 good_covs <- which(covs > 0.186)
-filter3_data <- filter2_data[good_covs]
+data_3 <- data_2[good_covs,]
 
 ```
 
@@ -65,7 +65,64 @@ write.csv(filter2_data, "filter2_expression_matrix.csv")
 ```
 
 
+## Hierarchical clustering & subtype discovery (Part 5)
 
+1. Perform hierarchical clustering on your fully filtered data matrix from Part 4.4. Be sure to check that you are clustering the patients and not the genes.
+```{r}
+
+```
+
+2. Cut the dendrogram such that the samples are divided into 2 clusters. How many samples are in each cluster?
+```{r}
+
+```
+
+3. Create a heatmap of the gene-expression of each gene across all samples using the heatmap() function. Include a column colorbar by setting the ColSideColors variable in the heatmap function equal to “red” if the sample belongs to the C3 subtype and “blue” otherwise. Subtype annotation can be found in the annotation matrix under the title cit-coloncancermolecularsubtype.
+```{r}
+
+```
+
+4. Using the expression matrix from Part 4.4 and the cluster memberships from Part 5.2, identify genes differentially expressed between the two clusters using a Welch t-test (results in a ranked list). Write out a dataframe containing the probeset ID, t-statistic, p-value, and adjusted p-value (i.e. FDR, see the p.adjust function) to a comma separated file for each comparison. How many genes are differentially expressed at adjusted 𝑝<0.05 between the clusters for both lists?
+```{r}
+
+```
+
+5. Select the most differentially expressed genes that you feel best define the clusters and explain your selection.
+```{r}
+
+```
+
+6. For groups with Biologist role only: perform the t-test analysis described in 5.4 on the expression matrix from 4.5 as well and provide to the Biologist as a csv file.
+```{r}
+
+```
+
+# Deliverables
+Report the number of samples in each cluster from Part 5.2
+```{r}
+
+```
+
+A heatmap of the genes and samples with a color bar indicating which subtype each sample belongs to
+report the number of differentially expressed genes at 𝑝<0.05 between the two clusters
+```{r}
+
+```
+
+A comma separated file containing the results of the Welch t-test for all genes irrespective of significance for each subtype comparison
+```{r}
+
+```
+
+Report a list of the genes you feel best represent each cluster and explain how you came to your conclusion
+```{r}
+
+```
+
+For groups with Biologist role only: A comma separated file with the t-test results computed on the expression matrix from 4.5.
+```{r}
+
+```
 
 
 
