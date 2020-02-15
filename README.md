@@ -20,7 +20,8 @@ Code for "Programmer" Role:
 
 Code for "Analyst" Role:
 project_1_analyst.Rmd
-- assumes results from programmer (expression_data_filtered.csv) and annotations are located in samples directory
+- assumes results from programmer (expression_data_filtered.csv) is located in analysis directory
+- assumes annotations are located in reference directory
 - writes output to analysis directory
 + A comma separated file with the filtered results from all three filters from 4.4 (filtered_expression_matrix.csv)
 + A comma separated file with the filtered results from the expression filter from 4.2 (filter2_expression_matrix.csv)
