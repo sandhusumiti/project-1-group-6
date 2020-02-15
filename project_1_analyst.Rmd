@@ -1,45 +1,72 @@
 ---
-title: "Noise Filtering and Dimensionality Reduction"
+title: "Analyst role for project 1"
 author: "Simran"
 date: "1/31/2020"
 output: word_document
 ---
 
+## Noise Filtering and Dimensionality Reduction (Part 4)
+
 # load data
 ```{r}
-intensity_data <- read.table("example_intensity_data.csv")
 
+intensity_data <- read.csv("../samples/expression_data_filtered.csv", row.names = 'X')
 ```
 
 # Implement the following filters on the RMA normalized, ComBat adjusted expression matrix:
 
 1. Expressed in at least 20% of samples (i.e. for each gene, at least 20% of the gene-expression values must be > 𝑙𝑜𝑔2(15)).
 ```{r}
-cutoff <- log2(15)
-poorly_expressed <- c()
-for (gene in 1:ncol(intensity_data)) {
-  percent_expressed <- sum(intensity_data[gene] > cutoff)/nrow(intensity_data) 
-  if (percent_expressed < .2) {
-    poorly_expressed <- c(poorly_expressed, gene)
-  }
+
+expressed <- function(probe) {
+  percent <- sum(as.numeric(probe) > log2(15))/ncol(intensity_data)
+  if (percent >= .20) { return(TRUE) } 
+  else { return(FALSE) }
 }
 
-if (!is.null(poorly_expressed)) { filter1_data <- intensity_data[-poorly_expressed]
-} else { filter1_data <- intensity_data }
+expression_vec <- apply(intensity_data, 1, expressed)
+data_1 <- intensity_data[expression_vec,]
 
 ```
 
 2. Have a variance significantly different from the median variance of all probe sets using a threshold of 𝑝<0.01 (hint: use a chi-squared test as shown in http://www.itl.nist.gov/div898/handbook/eda/section3/eda358.htm. You will need to manually compute the test statistic for each gene and compare it to the chi-squared distribution with the correct number of degrees of freedom using the qchisq() function).
 ```{r}
-filter2_data <- filter1_data
+
+df <- ncol(data_1)-1
+conf_level <- 0.99
+
+# find sd of all probes and find median
+all_sd <- apply(data_1, 1, sd)
+median <- median(all_sd)
+
+diff_var <- c()
+
+# caluculate upper bound chi square value
+chiupper = qchisq((1 - conf_level)/2, df, lower.tail = FALSE)
+
+# for each probe
+for (probe in c(1:nrow(data_1))) {
+  
+  #compute test statistic
+  t <- (df) * ((sd(data_1[probe,]) / median) ^2)
+  
+  # compare to upper bound
+  if (t > chiupper) {diff_var <- c(diff_var, probe)}
+  
+  }
+
+data_2 <- data_1[diff_var,]
 
 ```
 
 3. Have a coefficient of variation > 0.186.
 ```{r}
-covs <- apply(filter2_data, 2, sd) / apply(filter2_data, 2, mean)
+pop_mean <- mean(as.matrix(data_2))
+
+covs <- apply(data_2, 1, sd) 
+covs <- covs/pop_mean
 good_covs <- which(covs > 0.186)
-filter3_data <- filter2_data[good_covs]
+data_3 <- data_2[good_covs,]
 
 ```
 
@@ -48,24 +75,152 @@ filter3_data <- filter2_data[good_covs]
 A comma separated file with the filtered results from all three filters from 4.4. Write out a different file containing the gene expression matrix for genes passing all three of the filters from 4.1, 4.2, and 4.3.
 
 ```{r}
-write.csv(filter3_data, "filtered_expression_matrix.csv")
+write.csv(data_3, "../analysis/filtered_expression_matrix.csv")
 
 ```
 
 Report the number of genes that pass all of these thresholds.
 ```{r echo = FALSE}
-paste0("number of genes that pass all thresholds: ", ncol(filter3_data))
+paste0("number of genes that pass all thresholds: ", ncol(data_3))
 
 ```
 
 For groups with Biologist role only: A comma separated file with the filtered results from the expression filter from 4.2. For groups with Biologist role only: Write out the expression matrix for probesets that pass the expression threshold from 4.2 to a file with write.csv. (???)
 ```{r}
-write.csv(filter2_data, "filter2_expression_matrix.csv")
+write.csv(data_2, "../analysis/filter2_expression_matrix.csv")
 
 ```
 
 
+## Hierarchical clustering & subtype discovery (Part 5)
 
+1. Perform hierarchical clustering on your fully filtered data matrix from Part 4.4. Be sure to check that you are clustering the patients and not the genes.
+```{r}
+clusters <- hclust(dist(t(data_3)))
+
+```
+
+2. Cut the dendrogram such that the samples are divided into 2 clusters. How many samples are in each cluster?
+```{r}
+cut <- cutree(clusters, k = 2)
+
+paste0("samples in cluster 1: ", sum(cut == 1))
+paste0("samples in cluster 2: ", sum(cut == 2))
+
+```
+
+3. Create a heatmap of the gene-expression of each gene across all samples using the heatmap() function. Include a column colorbar by setting the ColSideColors variable in the heatmap function equal to “red” if the sample belongs to the C3 subtype and “blue” otherwise. Subtype annotation can be found in the annotation matrix under the title cit-coloncancermolecularsubtype.
+```{r}
+# load annotation file
+ann <- read.csv("../samples/proj_metadata.csv")
+
+# reduce to only geo accesion number and cit.coloncancermolecularsubtype
+subtypes <- data.frame(ann$geo_accession, ann$cit.coloncancermolecularsubtype)
+
+# isolate geo numbers of C3 samples
+C3_samples = subtypes[subtypes$ann.cit.coloncancermolecularsubtype == "C3",]$ann.geo_accession
+
+# create color vector for heatmap
+is_C3 = colnames(data_3) %in% C3_samples
+colorvec <- sapply(is_C3, function(x) {if (x == TRUE) {"red"} else {"blue"}})
+
+jpeg(file="../analysis/heatmap.jpeg")
+heatmap(x = as.matrix(data_3),
+        ColSideColors = colorvec)
+dev.off()
+
+heatmap(x = as.matrix(data_3),
+        ColSideColors = colorvec)
+
+
+```
+
+4. Using the expression matrix from Part 4.4 and the cluster memberships from Part 5.2, identify genes differentially expressed between the two clusters using a Welch t-test (results in a ranked list). Write out a dataframe containing the probeset ID, t-statistic, p-value, and adjusted p-value (i.e. FDR, see the p.adjust function) to a comma separated file for each comparison. How many genes are differentially expressed at adjusted 𝑝<0.05 between the clusters for both lists?
+```{r}
+cluster_1 <- data_3[,which(cut == 1)]
+cluster_2 <- data_3[,which(cut == 2)]
+t.test(cluster_1, cluster_2)
+
+differential_expression <- data.frame("probe_id" = rownames(cluster_1), 
+                                      "t_stat" = 0, 
+                                      "p_val" = 0, 
+                                      "adj_p" = 0)
+
+for (gene in c(1:nrow(cluster_1))) {
+  welch <- t.test(cluster_1[gene,], cluster_2[gene,])
+  differential_expression[gene,]$t_stat <- welch$statistic
+  differential_expression[gene,]$p_val <- welch$p.value
+}
+
+differential_expression$adj_p <- p.adjust(differential_expression$p_val, method = "fdr")
+
+significant <- differential_expression[differential_expression$adj_p < 0.05,]
+
+```
+
+5. Select the most differentially expressed genes that you feel best define the clusters and explain your selection.
+```{r}
+# find genes with low p values and high t stats
+significant <- differential_expression[abs(differential_expression$t_stat) > quantile(differential_expression$t_stat, .95),]
+
+```
+
+6. For groups with Biologist role only: perform the t-test analysis described in 5.4 on the expression matrix from 4.5 (data that only passed the second filter) as well and provide to the Biologist as a csv file.
+```{r}
+cluster_1_2 <- data_2[,which(cut == 1)]
+cluster_2_2 <- data_2[,which(cut == 2)]
+
+differential_expression_2 <- data.frame("probe_id" = rownames(cluster_1_2), 
+                                      "t_stat" = 0, 
+                                      "p_val" = 0, 
+                                      "adj_p" = 0)
+
+for (gene in c(1:nrow(cluster_1_2))) {
+  welch <- t.test(cluster_1_2[gene,], cluster_2_2[gene,])
+  differential_expression[gene,]$t_stat <- welch$statistic
+  differential_expression[gene,]$p_val <- welch$p.value
+  differential_expression[gene,]$adj_p <- p.adjust(welch$p.value, method = "fdr") # ?
+}
+
+write.csv(differential_expression_2, "../analysis/t_test_filter_2.csv")
+
+```
+
+# Deliverables
+Report the number of samples in each cluster from Part 5.2
+```{r}
+paste0("samples in cluster 1: ", sum(cut == 1))
+paste0("samples in cluster 2: ", sum(cut == 2))
+
+```
+
+A heatmap of the genes and samples with a color bar indicating which subtype each sample belongs to
+report the number of differentially expressed genes at 𝑝<0.05 between the two clusters
+```{r}
+# heatmap saved in 5.3
+paste0("number of differentially expressed genes at p < 0.05 between the two clusters: ", nrow(differential_expression[differential_expression$p_val < 0.05,]))
+
+```
+
+A comma separated file containing the results of the Welch t-test for all genes irrespective of significance for each subtype comparison
+```{r}
+write.csv(differential_expression, "../analysis/welch_results_allgenes.csv", row.names = FALSE)
+
+```
+
+Report a list of the genes you feel best represent each cluster and explain how you came to your conclusion
+```{r}
+# ????????????
+print("list of probe ids that had p < 0.05 and abs(t) in the 95th percentile: ")
+significant$probe_id
+
+```
+
+For groups with Biologist role only: A comma separated file with the t-test results computed on the expression matrix from 4.5.
+```{r}
+write.csv(differential_expression_2, "../analysis/welch_results_allgenes_filter2.csv", row.names = FALSE)
+
+```
 
 
 
