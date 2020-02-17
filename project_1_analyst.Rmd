@@ -156,12 +156,22 @@ differential_expression$adj_p <- p.adjust(differential_expression$p_val, method 
 
 significant <- differential_expression[differential_expression$adj_p < 0.05,]
 
+#	203240_at; neg t stat, 204457_s_at; pos t stat plotting test
+test <- data.frame("neg_t_probe" = unlist(data_3[rownames(data_3)=="203240_at",]),
+                   "pos_t_probe" = unlist(data_3[rownames(data_3)=="204457_s_at",]),
+                   "cluster" = cut)
+ggplot(test)+
+  geom_point(aes(x = test$neg_t_probe, y = test$pos_t_probe, color = as.factor(test$cluster)))
+
 ```
 
 5. Select the most differentially expressed genes that you feel best define the clusters and explain your selection.
+Choose 5 probes with highest negative t stats and 5 probes with lowest(most negative) t stats
 ```{r echo = FALSE, message = FALSE}
-# find genes with low p values and high t stats
-significant <- differential_expression[abs(differential_expression$t_stat) > quantile(differential_expression$t_stat, .95),]
+##########
+ordered_sig <- significant[order(significant$t_stat),]
+most_neg <- as.character(ordered_sig[c(1:5), 1])
+most_pos <- as.character(ordered_sig[c((nrow(ordered_sig)-4):(nrow(ordered_sig))), 1])
 
 ```
 
@@ -177,10 +187,11 @@ differential_expression_2 <- data.frame("probe_id" = rownames(cluster_1_2),
 
 for (gene in c(1:nrow(cluster_1_2))) {
   welch <- t.test(cluster_1_2[gene,], cluster_2_2[gene,])
-  differential_expression[gene,]$t_stat <- welch$statistic
-  differential_expression[gene,]$p_val <- welch$p.value
-  differential_expression[gene,]$adj_p <- p.adjust(welch$p.value, method = "fdr") # ?
+  differential_expression_2[gene,]$t_stat <- welch$statistic
+  differential_expression_2[gene,]$p_val <- welch$p.value
 }
+
+differential_expression_2$adj_p <- p.adjust(differential_expression_2$p_val, method = "fdr")
 
 write.csv(differential_expression_2, "../analysis/t_test_filter_2.csv")
 
@@ -210,9 +221,13 @@ write.csv(differential_expression, "../analysis/welch_results_allgenes.csv", row
 
 Report a list of the genes you feel best represent each cluster and explain how you came to your conclusion
 ```{r echo = FALSE, message = FALSE}
-# ????????????
-print("list of probe ids that had p < 0.05 and abs(t) in the 95th percentile: ")
-print(as.character(significant$probe_id))
+print("The following probes all have significant p values, indicating a statistically significant difference between the two clusters.")
+print("")
+pr''t("These probes have relatively high t-statistics, indicating that they reflect probes that have higher expression in cluster 1 and lower expression in cluster 2: ")
+print(most_pos)
+print("")
+pr''t("These probes have relatively low t-statistics, indicating that they reflect probes that have higher expression in cluster 2 and lower expression in cluster 1: ")
+print(most_neg)
 ```
 
 For groups with Biologist role only: A comma separated file with the t-test results computed on the expression matrix from 4.5.
