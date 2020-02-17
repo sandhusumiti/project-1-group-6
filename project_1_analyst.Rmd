@@ -81,7 +81,7 @@ write.csv(data_3, "../analysis/filtered_expression_matrix.csv")
 
 Report the number of genes that pass all of these thresholds.
 ```{r echo = FALSE, message = FALSE}
-print(paste0("number of genes that pass all thresholds: ", ncol(data_3)))
+print(paste0("number of genes that pass all thresholds: ", nrow(data_3)))
 
 ```
 
@@ -157,6 +157,7 @@ differential_expression$adj_p <- p.adjust(differential_expression$p_val, method 
 significant <- differential_expression[differential_expression$adj_p < 0.05,]
 
 #	203240_at; neg t stat, 204457_s_at; pos t stat plotting test
+print("How do t stats reflect probe expression? Example: ")
 test <- data.frame("neg_t_probe" = unlist(data_3[rownames(data_3)=="203240_at",]),
                    "pos_t_probe" = unlist(data_3[rownames(data_3)=="204457_s_at",]),
                    "cluster" = cut)
