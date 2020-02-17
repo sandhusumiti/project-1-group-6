@@ -9,7 +9,7 @@ output: word_document
 
 # load data
 ```{r echo = FALSE, message = FALSE}
-
+library(ggplot2)
 intensity_data <- read.csv("../analysis/expression_data_filtered.csv", row.names = 'X')
 ```
 
@@ -87,7 +87,7 @@ print(paste0("number of genes that pass all thresholds: ", ncol(data_3)))
 
 For groups with Biologist role only: A comma separated file with the filtered results from the expression filter from 4.2. For groups with Biologist role only: Write out the expression matrix for probesets that pass the expression threshold from 4.2 to a file with write.csv. (???)
 ```{r echo = FALSE, message = FALSE}
-write.csv(data_2, "../analanalysister2_expression_matrix.csv")
+write.csv(data_2, "../analysis/filter2_expression_matrix.csv")
 
 ```
 
@@ -222,11 +222,11 @@ write.csv(differential_expression, "../analysis/welch_results_allgenes.csv", row
 Report a list of the genes you feel best represent each cluster and explain how you came to your conclusion
 ```{r echo = FALSE, message = FALSE}
 print("The following probes all have significant p values, indicating a statistically significant difference between the two clusters.")
-print("")
-pr''t("These probes have relatively high t-statistics, indicating that they reflect probes that have higher expression in cluster 1 and lower expression in cluster 2: ")
+print('')
+print("These probes have relatively high t-statistics, indicating that they reflect probes that have higher expression in cluster 1 and lower expression in cluster 2: ")
 print(most_pos)
-print("")
-pr''t("These probes have relatively low t-statistics, indicating that they reflect probes that have higher expression in cluster 2 and lower expression in cluster 1: ")
+print('')
+print("These probes have relatively low t-statistics, indicating that they reflect probes that have higher expression in cluster 2 and lower expression in cluster 1: ")
 print(most_neg)
 ```
 
