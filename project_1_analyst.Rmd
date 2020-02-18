@@ -27,6 +27,8 @@ expressed <- function(probe) {
 expression_vec <- apply(intensity_data, 1, expressed)
 data_1 <- intensity_data[expression_vec,]
 
+print(paste0("Number of genes that pass filter 1: ", nrow(data_1)))
+
 ```
 
 2. Have a variance significantly different from the median variance of all probe sets using a threshold of 𝑝<0.01 (hint: use a chi-squared test as shown in http://www.itl.nist.gov/div898/handbook/eda/section3/eda358.htm. You will need to manually compute the test statistic for each gene and compare it to the chi-squared distribution with the correct number of degrees of freedom using the qchisq() function).
@@ -53,9 +55,10 @@ for (probe in c(1:nrow(data_1))) {
   # compare to upper bound
   if (t > chiupper) {diff_var <- c(diff_var, probe)}
   
-  }
+}
 
 data_2 <- data_1[diff_var,]
+print(paste0("Number of genes that pass filter 2: ", nrow(data_2)))
 
 ```
 
@@ -68,6 +71,7 @@ covs <- covs/pop_mean
 good_covs <- which(covs > 0.186)
 data_3 <- data_2[good_covs,]
 
+print(paste0("Number of genes that pass filter 3: ", nrow(data_3)))
 ```
 
 # Deliverables:
@@ -121,11 +125,14 @@ subtypes <- data.frame(ann$geo_accession, ann$cit.coloncancermolecularsubtype)
 C3_samples = subtypes[subtypes$ann.cit.coloncancermolecularsubtype == "C3",]$ann.geo_accession
 
 # create color vector for heatmap
-is_C3 = colnames(data_3) %in% C3_samples
+is_C3 =  sapply(strsplit(colnames(data_3), '_'), '[', 1) %in% C3_samples
 colorvec <- sapply(is_C3, function(x) {if (x == TRUE) {"red"} else {"blue"}})
 
-jpeg(file="../analysis/heatmap.jpeg")
-heatmap(x = as.matrix(data_3),
+heatmap_df <- data_3
+colnames(heatmap_df) <- sapply(strsplit(colnames(data_3), '.CEL.gz'), '[', 1)
+
+tiff(file="../analysis/heatmap.tiff", height = 10, width = 6, units = "in", res = 300)
+heatmap(x = as.matrix(heatmap_df),
         ColSideColors = colorvec)
 dev.off()
 
@@ -137,7 +144,10 @@ heatmap(x = as.matrix(data_3),
 
 4. Using the expression matrix from Part 4.4 and the cluster memberships from Part 5.2, identify genes differentially expressed between the two clusters using a Welch t-test (results in a ranked list). Write out a dataframe containing the probeset ID, t-statistic, p-value, and adjusted p-value (i.e. FDR, see the p.adjust function) to a comma separated file for each comparison. How many genes are differentially expressed at adjusted 𝑝<0.05 between the clusters for both lists?
 ```{r echo = FALSE, message = FALSE}
-cluster_1 <- data_3[,which(cut == 1)]
+library(ggplot2)
+
+clus
+er_1 <- data_3[,which(cut == 1)]
 cluster_2 <- data_3[,which(cut == 2)]
 t.test(cluster_1, cluster_2)
 
@@ -155,14 +165,23 @@ for (gene in c(1:nrow(cluster_1))) {
 differential_expression$adj_p <- p.adjust(differential_expression$p_val, method = "fdr")
 
 significant <- differential_expression[differential_expression$adj_p < 0.05,]
+print(paste0("Number of genes with significant differential expression: ", nrow(significant)))
 
 #	203240_at; neg t stat, 204457_s_at; pos t stat plotting test
 print("How do t stats reflect probe expression? Example: ")
 test <- data.frame("neg_t_probe" = unlist(data_3[rownames(data_3)=="203240_at",]),
                    "pos_t_probe" = unlist(data_3[rownames(data_3)=="204457_s_at",]),
                    "cluster" = cut)
-ggplot(test)+
-  geom_point(aes(x = test$neg_t_probe, y = test$pos_t_probe, color = as.factor(test$cluster)))
+
+test_colorvec <- sapply(as.factor(test$cluster), function(x) {if (x == 1) {"darkgreen"} else {"darkorange"}})
+
+ggplot(test, aes(x = test$neg_t_probe, y = test$pos_t_probe)) +
+  geom_point(aes(color = as.factor(test$cluster))) +
+  scale_color_manual(values = c(`1` = 'darkgreen', `2` = 'darkorange')) +
+  xlab("FCGBP expression") + 
+  ylab("GAS1 expression") +
+  labs(col = "Cluster")
+
 
 ```
 
@@ -173,6 +192,10 @@ Choose 5 probes with highest negative t stats and 5 probes with lowest(most nega
 ordered_sig <- significant[order(significant$t_stat),]
 most_neg <- as.character(ordered_sig[c(1:5), 1])
 most_pos <- as.character(ordered_sig[c((nrow(ordered_sig)-4):(nrow(ordered_sig))), 1])
+
+library(knitr)
+kable(ordered_sig[c(1:5, (nrow(ordered_sig)-4):(nrow(ordered_sig))), c(1,2)])
+
 
 ```
 
